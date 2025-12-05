@@ -1,0 +1,14 @@
+{
+  "name": "ewallet-mockup",
+  "version": "1.0.0",
+  "description": "Generar PNGs de mockups E_Wallet (desktop + mobile) usando Puppeteer",
+  "main": "generate_screenshots.js",
+  "scripts": {
+    "screenshots": "node generate_screenshots.js"
+  },
+  "author": "E_Wallet",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^21.0.0"
+  }
+}

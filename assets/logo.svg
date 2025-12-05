@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="64" viewBox="0 0 240 64" fill="none">
+  <rect width="64" height="64" rx="12" fill="#038cb2"/>
+  <path d="M18 20h28v2a6 6 0 0 1-6 6H24a2 2 0 0 1-2-2V20z" fill="#e6f7fb"/>
+  <path d="M14 32h36v8a8 8 0 0 1-8 8H22a6 6 0 0 1-6-6V32z" fill="#015b6a"/>
+  <text x="80" y="40" font-family="Inter, Arial, sans-serif" font-size="24" fill="#131e3a" font-weight="700">E_Wallet</text>
+</svg>
