@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    letter-spacing: 0;
+    @apply font-sans bg-gradient-to-b from-bg to-white text-[17px] text-gray-900 antialiased;
+  }
+
+  label {
+    @apply text-base text-gray-700;
+  }
+
+  input, textarea, select {
+    @apply text-base;
+  }
+
+  button {
+    @apply text-base;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-gray-700;
+  }
+}
