@@ -9,8 +9,8 @@ Estructura unificada:
    ```
    npm install
    ```
-2. Backend: crear `backend/.env` (ya existe). Asegura `FRONTEND_ORIGIN=http://localhost:5173` y credenciales MySQL.
-3. Frontend: en `frontend/.env` deja `VITE_API_URL=http://localhost:3000/api/v1`.
+2. Backend: copia `backend/.env.example` a `backend/.env` y ajusta las credenciales MySQL si aplica.
+3. Frontend: copia `frontend/.env.example` a `frontend/.env` si necesitas cambiar la URL del backend.
 4. Levanta todo en una terminal desde la raíz:
    ```
    npm run dev
@@ -24,4 +24,4 @@ El script SQL `backend/payment_wallet_db.sql` crea:
 - Usuario admin: `admin@ewallet.com` / `Admin123!`
 
 ## Notas
-- Si otro proceso usa el puerto 5174, libera el puerto o ajusta `FRONTEND_ORIGIN` y el comando `npm run dev` en `package.json`.
+- Si otro proceso usa el puerto 5174, libera el puerto o ajusta `FRONTEND_ORIGINS` en el backend y el comando `npm run dev` en `package.json`.
