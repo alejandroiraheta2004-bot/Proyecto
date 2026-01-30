@@ -153,7 +153,7 @@ export default function Settings() {
 
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
               <div>
-                <div className="font-semibold">Autenticación de dos factores</div>
+                <div className="font-semibold">Seguridad en dos Pasos</div>
                 <div className="text-base text-gray-700">Mayor seguridad para tu cuenta</div>
               </div>
               <button

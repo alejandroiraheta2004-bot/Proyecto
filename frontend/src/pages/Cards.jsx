@@ -163,9 +163,9 @@ export default function Cards() {
                 >
                   <option value="sky">Celeste</option>
                   <option value="blue">Azul</option>
-                  <option value="indigo">Índigo</option>
+                  <option value="indigo">Morado</option>
                   <option value="emerald">Verde</option>
-                  <option value="amber">Ámbar</option>
+                  <option value="amber">Naranja</option>
                   <option value="rose">Rosado</option>
                 </select>
               </div>

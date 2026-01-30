@@ -7,7 +7,7 @@ const Sidebar = ({ onLogout, onClose }) => {
   const location = useLocation();
   // Opciones de menú con sus rutas
   const menuItems = [
-    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Inicio', path: '/dashboard' },
     { label: 'Recargar', path: '/recharge' },
     { label: 'Enviar', path: '/send' },
     { label: 'Historial', path: '/history' },
@@ -208,7 +208,7 @@ const Dashboard = () => {
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-base text-gray-700">Panel principal de</p>
+            <p className="text-base text-gray-700">Pantalla principal de</p>
             <h2 className="text-2xl font-semibold text-gray-900">
               {profile ? `${profile.nombre || profile.name || ''}`.trim() || 'Usuario' : 'Cargando...'}
             </h2>
@@ -234,7 +234,7 @@ const Dashboard = () => {
                 <p className="font-semibold text-gray-900">{profile?.nombre || profile?.name || '—'}</p>
               </div>
               <div>
-                <p className="text-gray-500">Username</p>
+                <p className="text-gray-500">Usuario</p>
                 <p className="font-semibold text-gray-900">{profile?.username || '—'}</p>
               </div>
               <div>
