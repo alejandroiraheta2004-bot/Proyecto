@@ -1,6 +1,8 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { getExecutedTotal, getExecutions, runDuePayments } from '../services/payments';
+import ModalConfirm from '../components/ModalConfirm';
 
 // Barra lateral con navegación principal y cierre de sesión
 const Sidebar = ({ onLogout, onClose }) => {
@@ -10,6 +12,7 @@ const Sidebar = ({ onLogout, onClose }) => {
     { label: 'Inicio', path: '/dashboard' },
     { label: 'Recargar', path: '/recharge' },
     { label: 'Enviar', path: '/send' },
+    { label: 'Pagos', path: '/pagos' },
     { label: 'Historial', path: '/history' },
     { label: 'Tarjetas', path: '/cards' },
     { label: 'Ajustes', path: '/settings' },
@@ -91,14 +94,28 @@ const Dashboard = () => {
   const [profile, setProfile] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [cards, setCards] = useState([]);
+  const [executedTotal, setExecutedTotal] = useState(0);
+  const [executions, setExecutions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmConfig, setConfirmConfig] = useState({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: 'Confirmar',
+    variant: 'primary',
+    onConfirm: null
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // Carga perfil y transacciones en paralelo
   const fetchData = async () => {
     try {
       setLoading(true);
       setError('');
+      runDuePayments();
+      setExecutedTotal(getExecutedTotal());
+      setExecutions(getExecutions());
       const results = await Promise.allSettled([api.me(), api.myTransactions(), api.myCards()]);
       const [meRes, txRes, cardsRes] = results;
 
@@ -142,20 +159,29 @@ const Dashboard = () => {
     const totalExpense = transactions
       .filter((tx) => tx.type === 'debit')
       .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
-    const balance = Number(profile?.saldo_actual ?? totalIncome - totalExpense);
+    const balance = Number(profile?.saldo_actual ?? totalIncome - totalExpense) - executedTotal;
     return {
       totalIncome,
       totalExpense,
       balance,
     };
-  }, [transactions, profile]);
+  }, [transactions, profile, executedTotal]);
 
   // Últimas 5 transacciones para vista rápida
-  const lastTransactions = useMemo(() => (
-    [...transactions]
+  const lastTransactions = useMemo(() => {
+    const paymentExecutions = executions.map((exec) => ({
+      id: `payment-exec-${exec.id}`,
+      description: `Pago ejecutado: ${exec.serviceName}`,
+      amount: Number(exec.amount || 0),
+      type: 'debit',
+      transactionType: 'payment_executed',
+      createdAt: exec.executedAt || exec.executionDate
+    }));
+
+    return [...transactions, ...paymentExecutions]
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 5)
-  ), [transactions]);
+      .slice(0, 5);
+  }, [transactions, executions]);
 
   const selectedCard = useMemo(() => {
     if (!cards.length) return null;
@@ -165,12 +191,42 @@ const Dashboard = () => {
 
   // Limpia token y redirige al inicio
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/');
+    setConfirmConfig({
+      open: true,
+      title: 'Cerrar sesión',
+      description: 'Se cerrará tu sesión actual. ¿Deseas continuar?',
+      confirmText: 'Cerrar sesión',
+      variant: 'primary',
+      onConfirm: async () => {
+        localStorage.removeItem('token');
+        navigate('/');
+      }
+    });
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmLoading(true);
+    try {
+      await confirmConfig.onConfirm();
+    } finally {
+      setConfirmLoading(false);
+      setConfirmConfig((prev) => ({ ...prev, open: false }));
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      <ModalConfirm
+        open={confirmConfig.open}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        confirmText={confirmConfig.confirmText}
+        variant={confirmConfig.variant}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, open: false }))}
+        onConfirm={handleConfirm}
+        loading={confirmLoading}
+      />
       {/* Sidebar escritorio */}
       <div className="hidden md:block">
         <Sidebar onLogout={handleLogout} />
@@ -208,7 +264,7 @@ const Dashboard = () => {
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-base text-gray-700">Pantalla principal de</p>
+            <p className="text-base text-gray-700">Inicio de</p>
             <h2 className="text-2xl font-semibold text-gray-900">
               {profile ? `${profile.nombre || profile.name || ''}`.trim() || 'Usuario' : 'Cargando...'}
             </h2>
@@ -243,7 +299,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-gray-500">Saldo actual</p>
-                <p className="font-semibold text-gray-900">${Number(profile?.saldo_actual ?? 0).toFixed(2)}</p>
+                <p className="font-semibold text-gray-900">${Math.max(0, Number(profile?.saldo_actual ?? 0) - executedTotal).toFixed(2)}</p>
               </div>
             </div>
           </div>

@@ -84,7 +84,7 @@ export default function Register() {
             </div>
             
             <div>
-              <label className="block text-base text-gray-700 mb-1.5">Correo Electrónico</label>
+              <label className="block text-base text-gray-700 mb-1.5">Correo electrónico</label>
               <input
                 name="email"
                 type="email"

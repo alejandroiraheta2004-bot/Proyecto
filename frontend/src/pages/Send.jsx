@@ -1,6 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/api';
+import { getExecutedTotal, runDuePayments } from '../services/payments';
+import ModalConfirm from '../components/ModalConfirm';
 
 export default function Send() {
   const navigate = useNavigate();
@@ -18,14 +20,24 @@ export default function Send() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
+  const [executedTotal, setExecutedTotal] = useState(0);
+  const [confirmConfig, setConfirmConfig] = useState({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: 'Confirmar',
+    variant: 'primary',
+    onConfirm: null
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // Carga perfil y movimientos para calcular saldo
   const fetchData = async () => {
     try {
       setLoading(true);
       setError('');
+      runDuePayments();
+      setExecutedTotal(getExecutedTotal());
       const [meRes] = await Promise.all([api.me()]);
       setProfile(meRes?.data || meRes?.user || null);
     } catch (err) {
@@ -45,8 +57,8 @@ export default function Send() {
 
   // Calcula saldo disponible en base a ingresos y egresos
   const stats = useMemo(() => ({
-    balance: Number(profile?.saldo_actual ?? 0)
-  }), [profile]);
+    balance: Number(profile?.saldo_actual ?? 0) - executedTotal
+  }), [profile, executedTotal]);
 
   // Simula envío y limpia formulario
   const handleSubmit = (e) => {
@@ -63,25 +75,29 @@ export default function Send() {
       return;
     }
 
-    setConfirmAction(() => () =>
-      api.sendInternal({
-        identifier: recipient.trim(),
-        amount: amountValue,
-        description: message || `Envío a ${recipient}`
-      })
-        .then(async () => {
+    setConfirmConfig({
+      open: true,
+      title: 'Confirmar envío',
+      description: `Se enviarán $${amountValue.toFixed(2)} a ${recipient.trim()}. ¿Deseas continuar?`,
+      confirmText: 'Enviar',
+      onConfirm: async () => {
+        try {
+          await api.sendInternal({
+            identifier: recipient.trim(),
+            amount: amountValue,
+            description: message || `Envío a ${recipient}`
+          });
           await fetchData();
           setShowSuccess(true);
           setRecipient('');
           setAmount('');
           setMessage('');
           setTimeout(() => setShowSuccess(false), 2500);
-        })
-        .catch((err) => {
+        } catch (err) {
           setError(err?.message || 'No se pudo realizar el envío');
-        })
-    );
-    setConfirmOpen(true);
+        }
+      }
+    });
   };
 
   const handleExternalSubmit = (e) => {
@@ -98,15 +114,20 @@ export default function Send() {
       return;
     }
 
-    setConfirmAction(() => () =>
-      api.sendExternal({
-        bankName: bankName.trim(),
-        accountNumber: bankAccount.trim(),
-        holderName: holderName.trim(),
-        amount: amountValue,
-        description: externalMessage || `Envío a ${holderName}`
-      })
-        .then(async () => {
+    setConfirmConfig({
+      open: true,
+      title: 'Confirmar envío a banco',
+      description: `Se enviarán $${amountValue.toFixed(2)} al banco ${bankName.trim()} a nombre de ${holderName.trim()}. ¿Deseas continuar?`,
+      confirmText: 'Enviar',
+      onConfirm: async () => {
+        try {
+          await api.sendExternal({
+            bankName: bankName.trim(),
+            accountNumber: bankAccount.trim(),
+            holderName: holderName.trim(),
+            amount: amountValue,
+            description: externalMessage || `Envío a ${holderName}`
+          });
           await fetchData();
           setShowExternalSuccess(true);
           setBankName('');
@@ -115,45 +136,34 @@ export default function Send() {
           setExternalAmount('');
           setExternalMessage('');
           setTimeout(() => setShowExternalSuccess(false), 2500);
-        })
-        .catch((err) => {
+        } catch (err) {
           setError(err?.message || 'No se pudo realizar el envío');
-        })
-    );
-    setConfirmOpen(true);
+        }
+      }
+    });
   };
 
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gray-50">
-      {confirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">Confirmar acción</h4>
-            <p className="text-gray-700 mb-4">¿Deseas continuar con esta operación?</p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmOpen(false)}
-                className="px-4 py-2 rounded-lg bg-slate-100 text-gray-700 hover:bg-slate-200"
-              >
-                No
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  const action = confirmAction;
-                  setConfirmOpen(false);
-                  if (action) await action();
-                }}
-                className="px-4 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-500"
-              >
-                Sí
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ModalConfirm
+        open={confirmConfig.open}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        confirmText={confirmConfig.confirmText}
+        variant={confirmConfig.variant}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, open: false }))}
+        onConfirm={async () => {
+          if (!confirmConfig.onConfirm) return;
+          setConfirmLoading(true);
+          try {
+            await confirmConfig.onConfirm();
+          } finally {
+            setConfirmLoading(false);
+            setConfirmConfig((prev) => ({ ...prev, open: false }));
+          }
+        }}
+        loading={confirmLoading}
+      />
       <header className="flex items-center mb-6 w-full max-w-screen-xl mx-auto px-2 md:px-0">
         <Link to="/dashboard" className="flex items-center gap-3">
           <img src="/assets/logo.svg" alt="E-Wallet Logo" className="h-12" />
@@ -164,7 +174,7 @@ export default function Send() {
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900">Enviar Dinero</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900">Enviar dinero</h2>
               <p className="text-gray-700 text-base md:text-lg mb-2">Envía dinero de forma rápida y segura a otros usuarios.</p>
               {error && <p className="text-base text-red-700">{error}</p>}
             </div>
@@ -209,12 +219,12 @@ export default function Send() {
             {transferType === 'internal' ? (
               <>
                 <div>
-                  <label className="block text-base text-muted mb-2">Username o número de cuenta</label>
+                  <label className="block text-base text-muted mb-2">Usuario o número de cuenta</label>
                   <input
                     type="text"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
-                    placeholder="@usuario o 10xxxxxxxxxx"
+                    placeholder="usuario o 10xxxxxxxxxx"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400"
                     required
                   />
@@ -239,7 +249,7 @@ export default function Send() {
                     rows="3"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Para la cena, regalo, etc."
+                    placeholder="Para cena, regalo, etc."
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none"
                   />
                 </div>
@@ -268,7 +278,7 @@ export default function Send() {
                 </div>
 
                 <div>
-                  <label className="block text-base text-muted mb-2">Cuenta destino</label>
+                  <label className="block text-base text-muted mb-2">Cuenta de destino</label>
                   <input
                     type="text"
                     value={bankAccount}

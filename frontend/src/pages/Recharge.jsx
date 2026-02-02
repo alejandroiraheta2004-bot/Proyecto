@@ -1,6 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { getExecutedTotal, runDuePayments } from '../services/payments';
+import ModalConfirm from '../components/ModalConfirm';
 
 export default function Recharge() {
   const navigate = useNavigate();
@@ -15,16 +17,26 @@ export default function Recharge() {
   const [description, setDescription] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [balance, setBalance] = useState(0);
+  const [executedTotal, setExecutedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: 'Confirmar',
+    variant: 'primary',
+    onConfirm: null
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // Obtiene el saldo actual del usuario
   const fetchProfile = async () => {
     try {
       setLoading(true);
       setError('');
+      runDuePayments();
+      setExecutedTotal(getExecutedTotal());
       const [meRes] = await Promise.all([api.me()]);
       setBalance(Number(meRes?.data?.saldo_actual ?? meRes?.user?.saldo_actual ?? 0));
     } catch (err) {
@@ -78,18 +90,23 @@ export default function Recharge() {
     const amountValue = Number(amount);
     const cardDigits = cardNumber.replace(/\s/g, '');
 
-    setConfirmAction(() => () =>
-      api.recharge({
-        bankName: bankName.trim(),
-        cardType,
-        holderName: holderName.trim(),
-        cardNumber: cardDigits,
-        expiry,
-        cvv,
-        amount: amountValue,
-        description: description.trim() || undefined
-      })
-        .then(async () => {
+    setConfirmConfig({
+      open: true,
+      title: 'Confirmar recarga',
+      description: `Se recargarán $${amountValue.toFixed(2)} desde la tarjeta terminada en ${cardDigits.slice(-4)}. ¿Deseas continuar?`,
+      confirmText: 'Recargar',
+      onConfirm: async () => {
+        try {
+          await api.recharge({
+            bankName: bankName.trim(),
+            cardType,
+            holderName: holderName.trim(),
+            cardNumber: cardDigits,
+            expiry,
+            cvv,
+            amount: amountValue,
+            description: description.trim() || undefined
+          });
           await fetchProfile();
           setShowSuccess(true);
           setAmount('');
@@ -102,45 +119,34 @@ export default function Recharge() {
           setDescription('');
           setFieldErrors({});
           setTimeout(() => setShowSuccess(false), 2500);
-        })
-        .catch((err) => {
+        } catch (err) {
           setError(err?.message || 'No se pudo completar la recarga');
-        })
-    );
-    setConfirmOpen(true);
+        }
+      }
+    });
   };
 
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gray-50">
-      {confirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmOpen(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">Confirmar acción</h4>
-            <p className="text-gray-700 mb-4">¿Deseas continuar con esta operación?</p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmOpen(false)}
-                className="px-4 py-2 rounded-lg bg-slate-100 text-gray-700 hover:bg-slate-200"
-              >
-                No
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  const action = confirmAction;
-                  setConfirmOpen(false);
-                  if (action) await action();
-                }}
-                className="px-4 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-500"
-              >
-                Sí
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ModalConfirm
+        open={confirmConfig.open}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        confirmText={confirmConfig.confirmText}
+        variant={confirmConfig.variant}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, open: false }))}
+        onConfirm={async () => {
+          if (!confirmConfig.onConfirm) return;
+          setConfirmLoading(true);
+          try {
+            await confirmConfig.onConfirm();
+          } finally {
+            setConfirmLoading(false);
+            setConfirmConfig((prev) => ({ ...prev, open: false }));
+          }
+        }}
+        loading={confirmLoading}
+      />
       <header className="flex items-center mb-6 w-full max-w-screen-md mx-auto px-2 md:px-0">
         <Link to="/dashboard" className="flex items-center gap-3">
           <img src="/assets/logo.svg" alt="E-Wallet Logo" className="h-12" />
@@ -153,11 +159,11 @@ export default function Recharge() {
           <p className="text-gray-700 text-base md:text-lg mb-6">Usa tu tarjeta para ingresar dinero a tu cuenta de forma segura.</p>
 
             <div className="bg-slate-50 p-4 rounded-xl text-center mb-6">
-              <div className="text-base text-gray-700">Saldo Actual</div>
+              <div className="text-base text-gray-700">Saldo actual</div>
               {loading ? (
                 <div className="text-base text-gray-700">Cargando...</div>
               ) : (
-                <div className="text-2xl font-extrabold text-gray-900">${balance.toFixed(2)}</div>
+                <div className="text-2xl font-extrabold text-gray-900">${Math.max(0, balance - executedTotal).toFixed(2)}</div>
               )}
             </div>
 
@@ -280,7 +286,7 @@ export default function Recharge() {
                 type="submit"
                 className="min-w-[190px] bg-sky-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-sky-500 transition-colors"
               >
-                Recargar Ahora
+                Recargar ahora
               </button>
               <Link
                 to="/dashboard"

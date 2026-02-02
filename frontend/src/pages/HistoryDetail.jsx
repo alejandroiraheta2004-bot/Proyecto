@@ -1,6 +1,9 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/api';
+import ModalConfirm from '../components/ModalConfirm';
+import AlertMessage from '../components/AlertMessage';
+import { getExecutionById, getPaymentById, runDuePayments, updatePayment } from '../services/payments';
 
 export default function HistoryDetail() {
   const navigate = useNavigate();
@@ -8,6 +11,18 @@ export default function HistoryDetail() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [payment, setPayment] = useState(null);
+  const [execution, setExecution] = useState(null);
+  const [alert, setAlert] = useState({ type: 'info', message: '' });
+  const [confirmConfig, setConfirmConfig] = useState({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: 'Confirmar',
+    variant: 'primary',
+    onConfirm: null
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -27,13 +42,61 @@ export default function HistoryDetail() {
   };
 
   useEffect(() => {
+    if (String(id || '').startsWith('payment-exec-')) {
+      const executionId = String(id).replace('payment-exec-', '');
+      runDuePayments();
+      setExecution(getExecutionById(executionId));
+      setLoading(false);
+      return;
+    }
+    if (String(id || '').startsWith('payment-')) {
+      const paymentId = String(id).replace('payment-', '');
+      runDuePayments();
+      setPayment(getPaymentById(paymentId));
+      setLoading(false);
+      return;
+    }
     fetchData();
-  }, []);
+  }, [id]);
 
   const tx = useMemo(() => transactions.find((t) => String(t.id) === String(id)), [transactions, id]);
+  const isExecution = String(id || '').startsWith('payment-exec-');
+  const isPayment = String(id || '').startsWith('payment-') && !isExecution;
+
+  const openConfirm = (config) => {
+    setConfirmConfig({
+      open: true,
+      title: config.title,
+      description: config.description,
+      confirmText: config.confirmText || 'Confirmar',
+      variant: config.variant || 'primary',
+      onConfirm: config.onConfirm
+    });
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmLoading(true);
+    try {
+      await confirmConfig.onConfirm();
+    } finally {
+      setConfirmLoading(false);
+      setConfirmConfig((prev) => ({ ...prev, open: false }));
+    }
+  };
 
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gray-50">
+      <ModalConfirm
+        open={confirmConfig.open}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        confirmText={confirmConfig.confirmText}
+        variant={confirmConfig.variant}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, open: false }))}
+        onConfirm={handleConfirm}
+        loading={confirmLoading}
+      />
       <header className="flex items-center mb-6 w-full max-w-screen-xl mx-auto px-2 md:px-0">
         <Link to="/dashboard" className="flex items-center gap-3">
           <img src="/assets/logo.svg" alt="E-Wallet Logo" className="h-12" />
@@ -44,7 +107,7 @@ export default function HistoryDetail() {
             to="/history"
             className="px-4 py-2.5 bg-sky-600 text-white rounded-lg font-semibold hover:bg-sky-500 text-base"
           >
-            ← Regresar
+            ← Volver
           </Link>
         </div>
       </header>
@@ -55,6 +118,101 @@ export default function HistoryDetail() {
             <p className="text-gray-700">Cargando...</p>
           ) : error ? (
             <p className="text-red-600">{error}</p>
+          ) : isExecution ? (
+            !execution ? (
+              <p className="text-gray-700">No se encontró la ejecución del pago.</p>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-500">ID</div>
+                  <div className="text-lg font-semibold">{execution.id}</div>
+
+                  <div className="text-sm text-gray-500">Tipo</div>
+                  <div className="text-lg font-semibold">Pago ejecutado</div>
+
+                  <div className="text-sm text-gray-500">Monto</div>
+                  <div className="text-2xl font-extrabold text-purple-600">
+                    -${Math.abs(Number(execution.amount || 0)).toFixed(2)}
+                  </div>
+
+                  <div className="text-sm text-gray-500">Fecha de ejecución</div>
+                  <div className="text-lg font-semibold">{new Date(execution.executionDate).toLocaleDateString()}</div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-500">Servicio</div>
+                  <div className="text-lg font-semibold">{execution.serviceName}</div>
+
+                  <div className="text-sm text-gray-500">Frecuencia</div>
+                  <div className="text-lg font-semibold">{execution.frequency}</div>
+
+                  <div className="text-sm text-gray-500">Estado</div>
+                  <div className="text-lg font-semibold">Ejecutado</div>
+                </div>
+              </div>
+            )
+          ) : isPayment ? (
+            !payment ? (
+              <p className="text-gray-700">No se encontró el pago programado.</p>
+            ) : (
+              <div className="space-y-6">
+                {alert.message && (
+                  <AlertMessage type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
+                )}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="text-sm text-gray-500">ID</div>
+                    <div className="text-lg font-semibold">payment-{payment.id}</div>
+
+                    <div className="text-sm text-gray-500">Tipo</div>
+                    <div className="text-lg font-semibold">Pago programado</div>
+
+                    <div className="text-sm text-gray-500">Monto</div>
+                    <div className="text-2xl font-extrabold text-purple-600">
+                      -${Math.abs(Number(payment.amount || 0)).toFixed(2)}
+                    </div>
+
+                    <div className="text-sm text-gray-500">Próxima ejecución</div>
+                    <div className="text-lg font-semibold">{new Date(payment.nextExecutionDate || payment.executionDate).toLocaleDateString()}</div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="text-sm text-gray-500">Servicio</div>
+                    <div className="text-lg font-semibold">{payment.serviceName}</div>
+
+                    <div className="text-sm text-gray-500">Frecuencia</div>
+                    <div className="text-lg font-semibold">{payment.frequency}</div>
+
+                    <div className="text-sm text-gray-500">Estado</div>
+                    <div className="text-lg font-semibold">
+                      {payment.status === 'cancelled' ? 'Cancelado' : payment.status === 'completed' ? 'Completado' : 'Programado'}
+                    </div>
+                  </div>
+                </div>
+
+                {payment.status !== 'cancelled' && payment.status !== 'completed' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      openConfirm({
+                        title: 'Cancelar pago programado',
+                        description: 'Se cancelará este pago y ya no se ejecutará en la fecha indicada.',
+                        confirmText: 'Cancelar pago',
+                        variant: 'danger',
+                        onConfirm: async () => {
+                          const updated = updatePayment(payment.id, { status: 'cancelled', cancelledAt: new Date().toISOString() });
+                          setPayment(updated);
+                          setAlert({ type: 'warning', message: 'Pago cancelado correctamente.' });
+                        }
+                      });
+                    }}
+                    className="px-5 py-3 rounded-xl bg-red-50 text-red-700 font-semibold hover:bg-red-100"
+                  >
+                    Cancelar pago
+                  </button>
+                )}
+              </div>
+            )
           ) : !tx ? (
             <p className="text-gray-700">No se encontró la transacción.</p>
           ) : (

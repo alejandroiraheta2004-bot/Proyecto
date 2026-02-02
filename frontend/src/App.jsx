@@ -8,6 +8,7 @@ import History from './pages/History';
 import Settings from './pages/Settings';
 import Cards from './pages/Cards';
 import HistoryDetail from './pages/HistoryDetail';
+import Pagos from './pages/Pagos';
 
 function App() {
   // Rutas principales de la app
@@ -24,6 +25,7 @@ function App() {
         <Route path="/history/:id" element={<HistoryDetail />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/cards" element={<Cards />} />
+        <Route path="/pagos" element={<Pagos />} />
       </Routes>
     </Router>
   );
