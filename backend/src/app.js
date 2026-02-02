@@ -18,7 +18,7 @@ const app = express();
 app.use(helmet());
 
 // Permitimos varios orígenes por defecto para evitar bloqueos CORS en dev
-const allowedOrigins = (process.env.FRONTEND_ORIGINS || process.env.FRONTEND_ORIGIN || 'http://localhost:5174,http://localhost:5175,http://localhost:5501,http://192.168.1.131:5175,http://192.168.1.131:5174,http://192.168.1.131:5501')
+const allowedOrigins = (process.env.FRONTEND_ORIGINS || process.env.FRONTEND_ORIGIN || 'http://localhost:5174,http://localhost:5175,http://localhost:5501,http://192.168.1.131:5175,http://192.168.1.131:5174,http://192.168.1.131:5501,https://paymentwallet.vercel.app')
 	.split(',')
 	.map((o) => o.trim());
 
