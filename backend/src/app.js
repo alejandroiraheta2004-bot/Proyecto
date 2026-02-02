@@ -17,21 +17,12 @@ const app = express();
 // Middlewares de seguridad y parsing básico
 app.use(helmet());
 
-// Permitimos varios orígenes por defecto para evitar bloqueos CORS en dev
-const allowedOrigins = (process.env.FRONTEND_ORIGINS || process.env.FRONTEND_ORIGIN || 'http://localhost:5174,http://localhost:5175,http://localhost:5501,http://192.168.1.131:5175,http://192.168.1.131:5174,http://192.168.1.131:5501,https://paymentwallet.vercel.app')
-	.split(',')
-	.map((o) => o.trim());
-
 app.use(cors({
-	origin: (origin, callback) => {
-		if (!origin) return callback(null, true); // Permite herramientas como curl/postman
-		if (allowedOrigins.includes(origin)) return callback(null, true);
-		if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
-		if (/^http:\/\/192\.168\.1\.131:\d+$/.test(origin)) return callback(null, true);
-		return callback(new Error('Not allowed by CORS'));
-	},
-	allowedHeaders: ['Content-Type', 'Authorization'],
-	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+	origin: [
+		'http://localhost:5173',
+		'https://TU-PROYECTO.vercel.app'
+	],
+	credentials: true
 }));
 
 app.use(express.json());
