@@ -21,7 +21,7 @@ app.use(cors({
 	origin: [
 		'http://localhost:5174',
 		'https://paymentwalletsv.vercel.app',
-		'https://payment-wallet-w576.onrender.com'
+		'https://proyecto-xxg7.onrender.com'
 	],
 	credentials: true
 }));
