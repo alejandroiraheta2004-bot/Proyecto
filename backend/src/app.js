@@ -19,11 +19,11 @@ app.use(helmet());
 
 app.use(cors({
 	origin: [
-		'http://localhost:5174',
-		'https://paymentwalletsv.vercel.app',
-		'https://payment-wallet-w576.onrender.com'
+		'https://payment-wallet-w576.onrender.com',
+		'https://paymentwallet-three.vercel.app',
 	],
-	credentials: true
+    origin: true,
+    credentials: true
 }));
 
 app.use(express.json());
