@@ -20,10 +20,13 @@ app.use(helmet());
 app.use(cors({
 	origin: [
 		'http://localhost:5174',
-		'https://paymentwalletsv.vercel.app',
+		'http://localhost:5173',
+		'https://paymentwallet-three.vercel.app',
 		'https://proyecto-xxg7.onrender.com'
 	],
-	credentials: true
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
 
 app.use(express.json());
