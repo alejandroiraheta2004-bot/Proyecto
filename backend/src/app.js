@@ -19,27 +19,27 @@ app.use(helmet());
 
 app.use(cors({
 	origin: [
-		'https://payment-wallet-w576.onrender.com',
-		'https://paymentwallet-three.vercel.app',
+		'http://localhost:5174',
+		'https://paymentwalletsv.vercel.app',
+		'https://payment-wallet-w576.onrender.com'
 	],
-    origin: true,
-    credentials: true
+	credentials: true
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rutas versionadas de la API
-app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/auth/', authRouter);
 app.use('/api/v1/rols/', rolRouter);
 app.use('/api/v1/users/', userRouter);
 app.use('/api/v1/transactions/', transactionRouter);
 app.use('/api/v1/notifications/', notificationRouter);
 app.use('/api/v1/audits/', auditRouter);
-app.use('/api/v1/me', meRouter);
-app.use('/api/v1/cards', cardRouter);
-app.use('/api/v1/transfers', transferRouter);
-app.use('/api/v1/recharges', rechargeRouter);
-app.use('/api/v1/recharge', rechargeRouter);
+app.use('/api/v1/me/', meRouter);
+app.use('/api/v1/cards/', cardRouter);
+app.use('/api/v1/transfers/', transferRouter);
+app.use('/api/v1/recharges/', rechargeRouter);
+app.use('/api/v1/recharge/', rechargeRouter);
 
 export default app;
