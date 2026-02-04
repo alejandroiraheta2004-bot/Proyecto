@@ -343,6 +343,11 @@ export default function Cards() {
               >
                 {saving ? 'Guardando...' : 'Guardar tarjeta'}
               </button>
+
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <img src="/assets/pci.png" alt="Pagos seguros" className="h-5 opacity-80" />
+                <span>Pagos seguros</span>
+              </div>
             </form>
           </div>
 

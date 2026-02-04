@@ -296,6 +296,11 @@ export default function Recharge() {
               </Link>
             </div>
 
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 pt-2">
+              <img src="/assets/pci.png" alt="Pagos seguros" className="h-5 opacity-80" />
+              <span>Pagos seguros</span>
+            </div>
+
             {showSuccess && (
               <div className="flex items-center gap-3 bg-success border border-green-200 text-green-800 px-5 py-4 rounded-xl">
                 <img src="/assets/icon-check.svg" className="h-5" alt="" />

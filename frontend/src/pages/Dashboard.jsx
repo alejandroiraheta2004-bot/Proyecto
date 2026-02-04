@@ -16,6 +16,7 @@ const Sidebar = ({ onLogout, onClose }) => {
     { label: 'Historial', path: '/history' },
     { label: 'Tarjetas', path: '/cards' },
     { label: 'Ajustes', path: '/settings' },
+    { label: 'Información', path: '/info' },
   ];
 
   // Marca visualmente la ruta activa

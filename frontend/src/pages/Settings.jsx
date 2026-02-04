@@ -12,6 +12,7 @@ export default function Settings() {
   const [isEditing, setIsEditing] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [twoFactor, setTwoFactor] = useState(false);
+  const [biometrics, setBiometrics] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cards, setCards] = useState([]);
@@ -54,6 +55,13 @@ export default function Settings() {
   };
 
   useEffect(() => {
+    const storedNotifications = localStorage.getItem('ewallet_notifications');
+    const storedTwoFactor = localStorage.getItem('ewallet_two_factor');
+    const storedBiometrics = localStorage.getItem('ewallet_biometrics');
+
+    if (storedNotifications !== null) setNotifications(storedNotifications === 'true');
+    if (storedTwoFactor !== null) setTwoFactor(storedTwoFactor === 'true');
+    if (storedBiometrics !== null) setBiometrics(storedBiometrics === 'true');
     fetchProfile();
   }, []);
 
@@ -147,8 +155,26 @@ export default function Settings() {
         : 'Recibirás alertas de transacciones importantes.',
       confirmText: notifications ? 'Desactivar' : 'Activar',
       onConfirm: async () => {
-        setNotifications(!notifications);
+        const nextValue = !notifications;
+        setNotifications(nextValue);
+        localStorage.setItem('ewallet_notifications', String(nextValue));
         setAlert({ type: 'success', message: 'Preferencias de notificación actualizadas.' });
+      }
+    });
+  };
+
+  const handleToggleBiometrics = () => {
+    openConfirm({
+      title: biometrics ? 'Desactivar biometría' : 'Activar biometría',
+      description: biometrics
+        ? 'Se desactivará el acceso biométrico en este dispositivo.'
+        : 'Se activará el acceso biométrico en este dispositivo si es compatible.',
+      confirmText: biometrics ? 'Desactivar' : 'Activar',
+      onConfirm: async () => {
+        const nextValue = !biometrics;
+        setBiometrics(nextValue);
+        localStorage.setItem('ewallet_biometrics', String(nextValue));
+        setAlert({ type: 'success', message: 'Configuración biométrica actualizada.' });
       }
     });
   };
@@ -161,7 +187,9 @@ export default function Settings() {
         : 'Se activará la autenticación de dos pasos para tu cuenta.',
       confirmText: twoFactor ? 'Desactivar' : 'Activar',
       onConfirm: async () => {
-        setTwoFactor(!twoFactor);
+        const nextValue = !twoFactor;
+        setTwoFactor(nextValue);
+        localStorage.setItem('ewallet_two_factor', String(nextValue));
         setAlert({ type: 'success', message: 'Configuración de seguridad actualizada.' });
       }
     });
@@ -319,6 +347,23 @@ export default function Settings() {
               >
                 <div className={`w-6 h-6 bg-white rounded-full shadow transform transition-transform ${
                   notifications ? 'translate-x-7' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+              <div>
+                <div className="font-semibold">Biometría</div>
+                <div className="text-base text-gray-700">Acceso rápido en dispositivos compatibles</div>
+              </div>
+              <button
+                onClick={handleToggleBiometrics}
+                className={`w-14 h-8 rounded-full transition-colors ${
+                    biometrics ? 'bg-sky-600' : 'bg-slate-300'
+                  }`}
+              >
+                <div className={`w-6 h-6 bg-white rounded-full shadow transform transition-transform ${
+                  biometrics ? 'translate-x-7' : 'translate-x-1'
                 }`} />
               </button>
             </div>
