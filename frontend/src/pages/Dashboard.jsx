@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { getExecutedTotal, getExecutions, runDuePayments } from '../services/payments';
+import { getExecutions, runDuePayments } from '../services/payments';
 import ModalConfirm from '../components/ModalConfirm';
 
 // Barra lateral con navegación principal y cierre de sesión
@@ -67,14 +67,20 @@ const StatCard = ({ title, value, accent }) => (
 );
 
 const TransactionRow = ({ description, amount, type, createdAt, transactionType }) => {
-  // Ajusta color y signo según el tipo de movimiento
-  const color = type === 'credit' ? 'text-green-600' : 'text-red-600';
-  const sign = type === 'credit' ? '+' : '-';
-  const bgClass = transactionType === 'send_internal'
-    ? 'bg-sky-50'
+  const isPayment = String(transactionType || '').startsWith('payment');
+  const color = isPayment
+    ? 'text-purple-600'
     : type === 'credit'
-      ? 'bg-green-50'
-      : 'bg-red-50';
+      ? 'text-green-600'
+      : 'text-red-600';
+  const sign = type === 'credit' ? '+' : '-';
+  const bgClass = isPayment
+    ? 'bg-purple-50'
+    : transactionType === 'send_internal'
+      ? 'bg-sky-50'
+      : type === 'credit'
+        ? 'bg-green-50'
+        : 'bg-red-50';
   return (
     <div className={`flex items-center justify-between py-3 px-3 rounded-lg border border-gray-100 ${bgClass} last:border-b-0`}>
       <div>
@@ -95,7 +101,6 @@ const Dashboard = () => {
   const [profile, setProfile] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [cards, setCards] = useState([]);
-  const [executedTotal, setExecutedTotal] = useState(0);
   const [executions, setExecutions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -114,9 +119,9 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError('');
-      runDuePayments();
-      setExecutedTotal(getExecutedTotal());
-      setExecutions(getExecutions());
+      await runDuePayments();
+      const executionList = await getExecutions();
+      setExecutions(executionList);
       const results = await Promise.allSettled([api.me(), api.myTransactions(), api.myCards()]);
       const [meRes, txRes, cardsRes] = results;
 
@@ -159,14 +164,15 @@ const Dashboard = () => {
       .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
     const totalExpense = transactions
       .filter((tx) => tx.type === 'debit')
-      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
-    const balance = Number(profile?.saldo_actual ?? totalIncome - totalExpense) - executedTotal;
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+      + executions.reduce((sum, exec) => sum + Number(exec.amount || 0), 0);
+    const balance = Number(profile?.saldo_actual ?? totalIncome - totalExpense);
     return {
       totalIncome,
       totalExpense,
       balance,
     };
-  }, [transactions, profile, executedTotal]);
+  }, [transactions, profile, executions]);
 
   // Últimas 5 transacciones para vista rápida
   const lastTransactions = useMemo(() => {
@@ -300,7 +306,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-gray-500">Saldo actual</p>
-                <p className="font-semibold text-gray-900">${Math.max(0, Number(profile?.saldo_actual ?? 0) - executedTotal).toFixed(2)}</p>
+                <p className="font-semibold text-gray-900">${Math.max(0, Number(profile?.saldo_actual ?? 0)).toFixed(2)}</p>
               </div>
             </div>
           </div>

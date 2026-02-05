@@ -27,13 +27,22 @@ export default function Pagos() {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
-    runDuePayments();
-    setPayments(getPayments());
+    const loadData = async () => {
+      try {
+        await runDuePayments();
+        const list = await getPayments();
+        setPayments(list);
+      } catch (err) {
+        setAlert({ type: 'error', message: err?.message || 'No se pudieron cargar los pagos.' });
+      }
+    };
+    loadData();
   }, []);
 
-  const refreshPayments = () => {
-    runDuePayments();
-    setPayments(getPayments());
+  const refreshPayments = async () => {
+    await runDuePayments();
+    const list = await getPayments();
+    setPayments(list);
   };
 
   const openConfirm = (config) => {
@@ -83,32 +92,29 @@ export default function Pagos() {
       description: `Se ${editingId ? 'actualizará' : 'programará'} el pago de ${summary}.`,
       confirmText: editingId ? 'Actualizar' : 'Programar',
       onConfirm: async () => {
-        const payload = {
+        const basePayload = {
           serviceName: form.serviceName.trim(),
           accountNumber: form.accountNumber.trim(),
           amount: amountValue,
           executionDate: form.date,
-          nextExecutionDate: form.date,
-          frequency: form.frequency,
-          status: 'scheduled'
+          frequency: form.frequency
         };
 
-        if (editingId) {
-          updatePayment(editingId, payload);
-          setAlert({ type: 'success', message: 'Pago actualizado correctamente.' });
-        } else {
-          addPayment({
-            id: Date.now(),
-            createdAt: new Date().toISOString(),
-            ...payload
-          });
-          setAlert({ type: 'success', message: 'Pago programado correctamente.' });
+        try {
+          if (editingId) {
+            await updatePayment(editingId, { ...basePayload, nextExecutionDate: form.date, status: 'scheduled' });
+            setAlert({ type: 'success', message: 'Pago actualizado correctamente.' });
+          } else {
+            await addPayment(basePayload);
+            setAlert({ type: 'success', message: 'Pago programado correctamente.' });
+          }
+          setForm({ serviceName: '', accountNumber: '', amount: '', date: '', frequency: 'once' });
+          setEditingId(null);
+          setErrors({});
+          await refreshPayments();
+        } catch (err) {
+          setAlert({ type: 'error', message: err?.message || 'No se pudo guardar el pago.' });
         }
-
-        setForm({ serviceName: '', accountNumber: '', amount: '', date: '', frequency: 'once' });
-        setEditingId(null);
-        setErrors({});
-        refreshPayments();
       }
     });
   };
@@ -131,9 +137,13 @@ export default function Pagos() {
       confirmText: 'Cancelar pago',
       variant: 'danger',
       onConfirm: async () => {
-        updatePayment(payment.id, { status: 'cancelled', cancelledAt: new Date().toISOString() });
-        setAlert({ type: 'warning', message: 'Pago cancelado correctamente.' });
-        refreshPayments();
+        try {
+          await updatePayment(payment.id, { status: 'cancelled' });
+          setAlert({ type: 'warning', message: 'Pago cancelado correctamente.' });
+          await refreshPayments();
+        } catch (err) {
+          setAlert({ type: 'error', message: err?.message || 'No se pudo cancelar el pago.' });
+        }
       }
     });
   };

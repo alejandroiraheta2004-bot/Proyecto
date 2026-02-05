@@ -10,6 +10,7 @@ import meRouter from './routes/me.route.js';
 import cardRouter from './routes/card.route.js';
 import transferRouter from './routes/transfer.route.js';
 import rechargeRouter from './routes/recharge.route.js';
+import paymentRouter from './routes/payment.route.js';
 import helmet from 'helmet';
 
 const app = express();
@@ -44,5 +45,6 @@ app.use('/api/v1/cards/', cardRouter);
 app.use('/api/v1/transfers/', transferRouter);
 app.use('/api/v1/recharges/', rechargeRouter);
 app.use('/api/v1/recharge/', rechargeRouter);
+app.use('/api/v1/payments/', paymentRouter);
 
 export default app;

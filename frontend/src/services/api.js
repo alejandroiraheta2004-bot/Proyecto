@@ -54,6 +54,15 @@ export const api = {
   sendExternal: (payload) => request('/transfers/external', { method: 'POST', body: JSON.stringify(payload), headers: authHeader() }),
   // Recargas
   recharge: (payload) => request('/recharges', { method: 'POST', body: JSON.stringify(payload), headers: authHeader() }),
+  // Pagos programados
+  listPayments: () => request('/payments', { method: 'GET', headers: authHeader() }),
+  getPayment: (id) => request(`/payments/${id}`, { method: 'GET', headers: authHeader() }),
+  createPayment: (payload) => request('/payments', { method: 'POST', body: JSON.stringify(payload), headers: authHeader() }),
+  updatePayment: (id, payload) => request(`/payments/${id}`, { method: 'PATCH', body: JSON.stringify(payload), headers: authHeader() }),
+  cancelPayment: (id) => request(`/payments/${id}/cancel`, { method: 'PATCH', headers: authHeader() }),
+  listPaymentExecutions: () => request('/payments/executions', { method: 'GET', headers: authHeader() }),
+  getPaymentExecution: (id) => request(`/payments/executions/${id}`, { method: 'GET', headers: authHeader() }),
+  runDuePayments: () => request('/payments/run-due', { method: 'POST', headers: authHeader() })
 };
 
 // Adjunta token JWT si existe

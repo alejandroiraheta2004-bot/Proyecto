@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/api';
-import { getExecutedTotal, runDuePayments } from '../services/payments';
+import { runDuePayments } from '../services/payments';
 import ModalConfirm from '../components/ModalConfirm';
 
 export default function Send() {
@@ -20,7 +20,6 @@ export default function Send() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [executedTotal, setExecutedTotal] = useState(0);
   const [confirmConfig, setConfirmConfig] = useState({
     open: false,
     title: '',
@@ -36,8 +35,7 @@ export default function Send() {
     try {
       setLoading(true);
       setError('');
-      runDuePayments();
-      setExecutedTotal(getExecutedTotal());
+      await runDuePayments();
       const [meRes] = await Promise.all([api.me()]);
       setProfile(meRes?.data || meRes?.user || null);
     } catch (err) {
@@ -57,8 +55,8 @@ export default function Send() {
 
   // Calcula saldo disponible en base a ingresos y egresos
   const stats = useMemo(() => ({
-    balance: Number(profile?.saldo_actual ?? 0) - executedTotal
-  }), [profile, executedTotal]);
+    balance: Number(profile?.saldo_actual ?? 0)
+  }), [profile]);
 
   // Simula envío y limpia formulario
   const handleSubmit = (e) => {

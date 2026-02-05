@@ -33,9 +33,10 @@ export default function History() {
       setError('');
       const txRes = await api.myTransactions();
       const list = txRes?.data || txRes?.transactions || [];
-      runDuePayments();
-      setPayments(getPayments());
-      setExecutions(getExecutions());
+      await runDuePayments();
+      const [paymentList, executionList] = await Promise.all([getPayments(), getExecutions()]);
+      setPayments(paymentList);
+      setExecutions(executionList);
       // ordena de reciente a antiguo
       setTransactions([...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     } catch (err) {
@@ -337,7 +338,7 @@ export default function History() {
                           )}
                           {isPayment && tx.status && (
                             <span className={`text-xs px-2 py-1 rounded-full ${tx.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-purple-100 text-purple-700'}`}>
-                              {tx.status === 'cancelled' ? 'Cancelado' : 'Programado'}
+                              {tx.status === 'cancelled' ? 'Cancelado' : tx.status === 'executed' ? 'Ejecutado' : 'Programado'}
                             </span>
                           )}
                         </div>
@@ -377,11 +378,16 @@ export default function History() {
                               confirmText: 'Cancelar pago',
                               variant: 'danger',
                               onConfirm: async () => {
-                                updatePayment(tx.paymentId, { status: 'cancelled', cancelledAt: new Date().toISOString() });
-                                runDuePayments();
-                                setPayments(getPayments());
-                                setExecutions(getExecutions());
-                                setAlert({ type: 'warning', message: 'Pago cancelado correctamente.' });
+                                try {
+                                  await updatePayment(tx.paymentId, { status: 'cancelled' });
+                                  await runDuePayments();
+                                  const [paymentList, executionList] = await Promise.all([getPayments(), getExecutions()]);
+                                  setPayments(paymentList);
+                                  setExecutions(executionList);
+                                  setAlert({ type: 'warning', message: 'Pago cancelado correctamente.' });
+                                } catch (err) {
+                                  setAlert({ type: 'error', message: err?.message || 'No se pudo cancelar el pago.' });
+                                }
                               }
                             });
                           }}

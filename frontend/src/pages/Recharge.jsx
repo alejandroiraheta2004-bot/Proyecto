@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { getExecutedTotal, runDuePayments } from '../services/payments';
+import { runDuePayments } from '../services/payments';
 import ModalConfirm from '../components/ModalConfirm';
 
 export default function Recharge() {
@@ -17,7 +17,6 @@ export default function Recharge() {
   const [description, setDescription] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [balance, setBalance] = useState(0);
-  const [executedTotal, setExecutedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [confirmConfig, setConfirmConfig] = useState({
@@ -35,8 +34,7 @@ export default function Recharge() {
     try {
       setLoading(true);
       setError('');
-      runDuePayments();
-      setExecutedTotal(getExecutedTotal());
+      await runDuePayments();
       const [meRes] = await Promise.all([api.me()]);
       setBalance(Number(meRes?.data?.saldo_actual ?? meRes?.user?.saldo_actual ?? 0));
     } catch (err) {
@@ -163,7 +161,7 @@ export default function Recharge() {
               {loading ? (
                 <div className="text-base text-gray-700">Cargando...</div>
               ) : (
-                <div className="text-2xl font-extrabold text-gray-900">${Math.max(0, balance - executedTotal).toFixed(2)}</div>
+                <div className="text-2xl font-extrabold text-gray-900">${Math.max(0, balance).toFixed(2)}</div>
               )}
             </div>
 

@@ -88,6 +88,41 @@ CREATE TABLE IF NOT EXISTS debit_cards (
 	foreign key (id_user) references users(id) on update cascade on delete cascade
 );
 
+CREATE TABLE IF NOT EXISTS scheduled_payments (
+	id int primary key auto_increment,
+	id_user int not null,
+	service_name varchar(120) not null,
+	account_number varchar(60) not null,
+	amount decimal(13,4) not null,
+	execution_date date not null,
+	next_execution_date date null,
+	frequency varchar(20) not null,
+	status varchar(20) not null default 'scheduled',
+	last_executed_at datetime null,
+	cancelled_at datetime null,
+	created_at timestamp default current_timestamp,
+	updated_at timestamp default current_timestamp,
+	foreign key (id_user) references users(id) on update cascade on delete cascade
+);
+
+CREATE TABLE IF NOT EXISTS payment_executions (
+	id int primary key auto_increment,
+	payment_id int not null,
+	id_user int not null,
+	service_name varchar(120) not null,
+	account_number varchar(60) not null,
+	amount decimal(13,4) not null,
+	execution_date date not null,
+	executed_at datetime not null,
+	frequency varchar(20) not null,
+	status varchar(20) not null default 'executed',
+	created_at timestamp default current_timestamp,
+	updated_at timestamp default current_timestamp,
+	unique key uniq_payment_execution (payment_id, execution_date),
+	foreign key (payment_id) references scheduled_payments(id) on update cascade on delete cascade,
+	foreign key (id_user) references users(id) on update cascade on delete cascade
+);
+
 CREATE TABLE IF NOT EXISTS notifications (
 	id int primary key auto_increment,
 	id_user int not null,

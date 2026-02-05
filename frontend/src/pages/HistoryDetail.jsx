@@ -42,21 +42,26 @@ export default function HistoryDetail() {
   };
 
   useEffect(() => {
-    if (String(id || '').startsWith('payment-exec-')) {
-      const executionId = String(id).replace('payment-exec-', '');
-      runDuePayments();
-      setExecution(getExecutionById(executionId));
-      setLoading(false);
-      return;
-    }
-    if (String(id || '').startsWith('payment-')) {
-      const paymentId = String(id).replace('payment-', '');
-      runDuePayments();
-      setPayment(getPaymentById(paymentId));
-      setLoading(false);
-      return;
-    }
-    fetchData();
+    const loadData = async () => {
+      if (String(id || '').startsWith('payment-exec-')) {
+        const executionId = String(id).replace('payment-exec-', '');
+        await runDuePayments();
+        const exec = await getExecutionById(executionId);
+        setExecution(exec);
+        setLoading(false);
+        return;
+      }
+      if (String(id || '').startsWith('payment-')) {
+        const paymentId = String(id).replace('payment-', '');
+        await runDuePayments();
+        const pay = await getPaymentById(paymentId);
+        setPayment(pay);
+        setLoading(false);
+        return;
+      }
+      fetchData();
+    };
+    loadData();
   }, [id]);
 
   const tx = useMemo(() => transactions.find((t) => String(t.id) === String(id)), [transactions, id]);
@@ -200,9 +205,13 @@ export default function HistoryDetail() {
                         confirmText: 'Cancelar pago',
                         variant: 'danger',
                         onConfirm: async () => {
-                          const updated = updatePayment(payment.id, { status: 'cancelled', cancelledAt: new Date().toISOString() });
-                          setPayment(updated);
-                          setAlert({ type: 'warning', message: 'Pago cancelado correctamente.' });
+                          try {
+                            const updated = await updatePayment(payment.id, { status: 'cancelled' });
+                            setPayment(updated);
+                            setAlert({ type: 'warning', message: 'Pago cancelado correctamente.' });
+                          } catch (err) {
+                            setAlert({ type: 'error', message: err?.message || 'No se pudo cancelar el pago.' });
+                          }
                         }
                       });
                     }}
